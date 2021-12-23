@@ -30,7 +30,7 @@ line_length = 79
 
 [tool.pytest.ini_options]
 log_level = "debug"
-addopts = "-ra"
+addopts = "-v -ra -n=auto --dist loadscope --cov=dvc --no-cov-on-fail --durations=0"
 markers = [
     "needs_internet: Might need network access for the tests",
 ]

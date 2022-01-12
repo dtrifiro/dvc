@@ -1,0 +1,18 @@
+---
+- hosts: all
+  become: true
+
+  tasks:
+    - name: install dvc-2.9.3 from .deb source
+      apt:
+        deb: https://dvc.org/download/linux-deb/dvc-2.9.3
+        state: present
+      become: true
+      register: apt_output
+      when: ansible_os_family == 'Debian'
+
+    - name: examples repo
+      git:
+        repo: https://github.com/iterative/example-get-started
+        dest: 'example-get-started'
+        version: master

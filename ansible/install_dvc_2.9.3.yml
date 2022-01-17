@@ -10,13 +10,6 @@
       register: apt_output
       when: ansible_os_family == 'Debian'
 
-    - name: install dvc-2.9.3 .rpm source
-      yum:
-        name: https://dvc.org/download/linux-rpm/dvc-2.9.3
-        state: present
-      become: true
-      when: ansible_os_family == 'RedHat'
-
     - name: examples repo
       git:
         repo: https://github.com/iterative/example-get-started

@@ -1,0 +1,18 @@
+---
+- hosts: all
+
+
+    - name: examples repo
+      git:
+        repo: https://github.com/iterative/example-get-started
+        dest: 'example-get-started'
+        version: master
+
+    - name: check if working
+      shell: |
+        cd ~/example-get-started
+        dvc doctor
+        dvc status
+        dvc metrics show
+      args:
+        executable: /bin/bash

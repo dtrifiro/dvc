@@ -1,12 +1,11 @@
 ---
 - hosts: all
 
-
-    - name: examples repo
-      git:
-        repo: https://github.com/iterative/example-get-started
-        dest: 'example-get-started'
-        version: master
+  tasks:
+    - name: example repo folder
+      stat:
+        path: ~/example-get-started
+      register: example_repo
 
     - name: check if working
       shell: |
@@ -16,3 +15,4 @@
         dvc metrics show
       args:
         executable: /bin/bash
+      when: example_repo.stat.exists

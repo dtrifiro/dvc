@@ -12,8 +12,8 @@ Vagrant.configure("2") do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
-  # config.vm.box = "generic/ubuntu2004"
-  config.vm.box = "generic/ubuntu1804"
+  config.vm.box = "generic/ubuntu2004"
+  # config.vm.box = "generic/ubuntu1804"
   # config.vm.box = "centos/7"
 
 
@@ -71,10 +71,21 @@ Vagrant.configure("2") do |config|
   #   apt-get install -y apache2
   # SHELL
 
+  # config.vm.provision "ansible" do |ansible|
+  #   ansible.verbose = "v"
+  #   ansible.playbook = "/home/brethil/projects/dotfiles/ansible/playbooks/setup.yml"
+  # end
   config.vm.provision "ansible" do |ansible|
     ansible.verbose = "v"
-    # ansible.playbook = "/home/brethil/projects/dotfiles/ansible/playbooks/setup.yml"
-    ansible.playbook = "ansible/install_dvc.yml"
+    ansible.playbook = "ansible/install-dvc.yml"
+  end
+  config.vm.provision "ansible" do |ansible|
+    ansible.verbose = "v"
+    ansible.playbook = "ansible/examples-repo.yml"
+  end
+  config.vm.provision "ansible" do |ansible|
+    ansible.verbose = "v"
+    ansible.playbook = "ansible/test.yml"
   end
 
 end

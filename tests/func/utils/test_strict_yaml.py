@@ -287,41 +287,70 @@ Could not find expected ':', in line 4, column 8
   4 │   cmd: python src/load_data.py"""
 
 
+FIXED_CONSOLE_WIDTH = 80
+
 examples = {
     # on parse errors
-    "duplicate_keys": (DUPLICATE_KEYS, DUPLICATE_KEYS_OUTPUT),
+    "duplicate_keys": (DUPLICATE_KEYS, f"{DUPLICATE_KEYS_OUTPUT}"),
     "mapping_values_not_allowed": (
         MAPPING_VALUES_NOT_ALLOWED,
-        MAPPING_VALUES_NOT_ALLOWED_OUTPUT,
+        MAPPING_VALUES_NOT_ALLOWED_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
     ),
     "no_hyphen_block": (
         NO_HYPHEN_INDICATOR_IN_BLOCK,
-        NO_HYPHEN_INDICATOR_IN_BLOCK_OUTPUT,
+        NO_HYPHEN_INDICATOR_IN_BLOCK_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
     ),
-    "unclosed_scalar": (UNCLOSED_SCALAR, UNCLOSED_SCALAR_OUTPUT),
+    "unclosed_scalar": (
+        UNCLOSED_SCALAR,
+        UNCLOSED_SCALAR_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
+    ),
     # schema validation errors
-    "not_a_dict": (NOT_A_DICT, NOT_A_DICT_OUTPUT),
-    "empty_stage": (EMPTY_STAGE, EMPTY_STAGE_OUTPUT),
-    "missing_cmd": (MISSING_CMD, MISSING_CMD_OUTPUT),
-    "deps_as_dict": (DEPS_AS_DICT, DEPS_AS_DICT_OUTPUT),
-    "outs_as_str": (OUTS_AS_STR, OUTS_AS_STR_OUTPUT),
-    "null_value_on_outs": (NULL_VALUE_ON_OUTS, NULL_VALUE_ON_OUTS_OUTPUT),
+    "not_a_dict": (NOT_A_DICT, NOT_A_DICT_OUTPUT.ljust(FIXED_CONSOLE_WIDTH)),
+    "empty_stage": (
+        EMPTY_STAGE,
+        EMPTY_STAGE_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
+    ),
+    "missing_cmd": (
+        MISSING_CMD,
+        MISSING_CMD_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
+    ),
+    "deps_as_dict": (
+        DEPS_AS_DICT,
+        DEPS_AS_DICT_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
+    ),
+    "outs_as_str": (
+        OUTS_AS_STR,
+        OUTS_AS_STR_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
+    ),
+    "null_value_on_outs": (
+        NULL_VALUE_ON_OUTS,
+        NULL_VALUE_ON_OUTS_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
+    ),
     "additional_key_on_outs": (
         ADDITIONAL_KEY_ON_OUTS,
-        ADDITIONAL_KEY_ON_OUTS_OUTPUT,
+        ADDITIONAL_KEY_ON_OUTS_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
     ),
-    "foreach_scalar": (FOREACH_SCALAR_VALUE, FOREACH_SCALAR_VALUE_OUTPUT),
-    "foreach_do_do_null": (FOREACH_DO_NULL, FOREACH_DO_NULL_OUTPUT),
+    "foreach_scalar": (
+        FOREACH_SCALAR_VALUE,
+        FOREACH_SCALAR_VALUE_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
+    ),
+    "foreach_do_do_null": (
+        FOREACH_DO_NULL,
+        FOREACH_DO_NULL_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
+    ),
     "foreach_do_missing_cmd": (
         FOREACH_DO_MISSING_CMD,
-        FOREACH_DO_MISSING_CMD_OUTPUT,
+        FOREACH_DO_MISSING_CMD_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
     ),
     "foreach_unknown_cmd_missing_do": (
         FOREACH_WITH_CMD_DO_MISSING,
-        FOREACH_WITH_CMD_DO_MISSING_OUTPUT,
+        FOREACH_WITH_CMD_DO_MISSING_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
     ),
     # merge conflicts
-    "merge_conflicts": (MERGE_CONFLICTS, MERGE_CONFLICTS_OUTPUT),
+    "merge_conflicts": (
+        MERGE_CONFLICTS,
+        MERGE_CONFLICTS_OUTPUT.ljust(FIXED_CONSOLE_WIDTH),
+    ),
 }
 
 
@@ -338,8 +367,10 @@ def test_exceptions(tmp_dir, dvc, capsys, text, expected, mocker):
     original_printer = console.print
 
     def print_with_fixed_width(*args, **kwargs):
-        console.options.min_width = console.options.max_width = 80
-        console.width = kwargs["width"] = 80
+        console.options.min_width = (
+            console.options.max_width
+        ) = FIXED_CONSOLE_WIDTH
+        console.width = kwargs["width"] = FIXED_CONSOLE_WIDTH
         return original_printer(*args, **kwargs)
 
     mocker.patch.object(console, "print", print_with_fixed_width)

@@ -23,47 +23,46 @@ def gc(odb, used, jobs=None, cache_odb=None, shallow=True):
 
         return _hash.endswith(HASH_DIR_SUFFIX)
 
-    # group hashes to that we can remove dirs first
-    to_remove = dict(
-        itertools.groupby(
-            filter(
-                lambda hash_: hash_ not in used_hashes,
-                odb.all(jobs, odb.fs_path),
-            ),
-            key=_is_dir_hash,
-        )
+    to_remove = filter(
+        lambda hash_: hash_ not in used_hashes,
+        odb.all(jobs, odb.fs_path),
     )
-    dir_hashes = list(to_remove.get(True, []))
-    file_hashes = list(to_remove.get(False, []))
-
-    if not (dir_hashes or file_hashes):
-        return False
 
     from dvc.data.transfer import _log_exceptions
     from dvc.progress import Tqdm
 
-    with Tqdm(
-        total=len(dir_hashes), unit="dirs", desc="Cleaning dirs"
-    ) as pbar:
-        with ThreadPoolExecutor(max_workers=jobs) as executor:
-            wrapper = pbar.wrap_fn(
-                _log_exceptions(
-                    # backward compatibility
-                    odb._remove_unpacked_dir  # pylint: disable=protected-access
-                )
-            )
-            executor.imap_unordered(wrapper, dir_hashes)
+    deleted = False
+    for is_dir_hash, hashes in itertools.groupby(
+        to_remove, _is_dir_hash
+    ):  # by looping on the groupby, we run over dir hashes first, which should be removed first
+        hashes = list(hashes)
+        if hashes:
+            deleted = True
+        else:
+            continue
 
-    with Tqdm(
-        total=len(file_hashes), unit="objs", desc="Cleaning objects"
-    ) as pbar:
-        with ThreadPoolExecutor(max_workers=jobs) as executor:
+        if is_dir_hash:
+            unit = "dirs"
+            desc = "Cleaning dirs"
+
+            def remover(hash_):
+                # backward compatibility
+                odb._remove_unpacked_dir(  # pylint: disable=protected-access
+                    hash_
+                )
+
+        else:
+            unit = "objs"
+            desc = "Cleaning objects"
 
             def remover(hash_):
                 fs_path = odb.path_to_hash(hash_)
                 odb.fs.remove(fs_path)
 
-            wrapper = pbar.wrap_fn(_log_exceptions(remover))
-            executor.imap_unordered(wrapper, file_hashes)
+        with Tqdm(total=len(hashes), unit=unit, desc=desc) as pbar:
+            with ThreadPoolExecutor(max_workers=jobs) as executor:
+                executor.imap_unordered(
+                    pbar.wrap_fn(_log_exceptions(remover), hashes)
+                )
 
-    return True
+    return deleted

@@ -5,7 +5,7 @@ from threading import RLock
 
 from tqdm import tqdm
 
-from dvc.env import DVC_IGNORE_ISATTY
+from dvc.env import DVC_IGNORE_ISATTY, DVC_PROGRESS_DISABLE
 from dvc.utils import env2bool
 
 logger = logging.getLogger(__name__)
@@ -81,6 +81,9 @@ class Tqdm(tqdm):
             and hasattr(file, "isatty")
         ):
             disable = not file.isatty()
+        # disable when DVC_PROGRESS env variable is set
+        if not disable and env2bool(DVC_PROGRESS_DISABLE):
+            disable = True
         super().__init__(
             iterable=iterable,
             disable=disable,

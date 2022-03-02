@@ -348,7 +348,7 @@ class FileSystem:
         makedirs(localfs.path.parent(to_info), exist_ok=True)
         tmp_file = tmp_fname(to_info)
 
-        logger.debug("Downloading '%s' to '%s'", from_info, to_info)
+        # logger.debug("Downloading '%s' to '%s'", from_info, to_info)
         try:
             # noqa, pylint: disable=no-member
             self.get_file(from_info, tmp_file, callback=callback)

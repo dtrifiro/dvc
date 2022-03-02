@@ -84,13 +84,13 @@ class State(StateBase):  # pylint: disable=too-many-instance-attributes
         mtime, size = get_mtime_and_size(path, fs, self.dvcignore)
         inode = get_inode(path)
 
-        logger.debug(
-            "state save (%s, %s, %s) %s",
-            inode,
-            mtime,
-            str(size),
-            hash_info.value,
-        )
+        # logger.debug(
+        #     "state save (%s, %s, %s) %s",
+        #     inode,
+        #     mtime,
+        #     str(size),
+        #     hash_info.value,
+        # )
 
         self.md5s[inode] = (mtime, str(size), hash_info.value)
 

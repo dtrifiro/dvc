@@ -97,6 +97,7 @@ class HTTPFileSystem(NoDirectoriesMixin, FSSpecWrapper):
     async def get_client(self, **kwargs):
         import aiohttp
         from aiohttp_retry import ExponentialRetry, RetryClient
+        from fsspec.asyn import fsspec_loop
 
         kwargs["retry_options"] = ExponentialRetry(
             attempts=self.SESSION_RETRIES,
@@ -117,7 +118,10 @@ class HTTPFileSystem(NoDirectoriesMixin, FSSpecWrapper):
             sock_read=None,
         )
 
-        return RetryClient(**kwargs)
+        kwargs.pop("loop")
+        with fsspec_loop():
+            client = RetryClient(**kwargs)
+        return client
 
     @cached_property
     def fs(self):

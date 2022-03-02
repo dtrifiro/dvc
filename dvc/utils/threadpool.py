@@ -25,10 +25,14 @@ class ThreadPoolExecutor(futures.ThreadPoolExecutor):
 
         it = zip(*iterables)
         tasks = create_taskset(self.max_workers * 5)
+        timeouts = 0
         while tasks:
             done, tasks = futures.wait(
-                tasks, return_when=futures.FIRST_COMPLETED
+                tasks, return_when=futures.FIRST_COMPLETED, timeout=20
             )
             for fut in done:
                 yield fut.result()
+            if not done:
+                timeouts += 1
+                print(f"timeout {timeouts}")
             tasks.update(create_taskset(len(done)))

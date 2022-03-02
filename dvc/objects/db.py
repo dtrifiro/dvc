@@ -360,6 +360,9 @@ class ObjectDB:
         """Return list of the specified hashes which exist in this fs.
         Hashes will be queried individually.
         """
+        if not hashes:
+            return []
+
         logger.debug(f"Querying {len(hashes)} hashes via object_exists")
         with Tqdm(
             desc="Querying "

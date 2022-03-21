@@ -283,6 +283,11 @@ class Console:
 
         return 0
 
+    def slow_warning(self, msg: str, timeout: int):
+        from .slow_warning import SlowWarning
+
+        return SlowWarning(self, msg, timeout)
+
 
 ui = Console()
 

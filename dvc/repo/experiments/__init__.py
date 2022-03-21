@@ -398,7 +398,13 @@ class Experiments:
             self.reset_checkpoints()
 
         if not (queue or tmp_dir or machine):
-            staged, _, _ = self.scm.status()
+            from dvc.ui import ui
+
+            with ui.slow_warning(
+                "scm.status() call is slow, make sure you do not have any large untracked directories",
+                timeout=15,
+            ):
+                staged, _, _ = self.scm.status()
             if staged:
                 logger.warning(
                     "Your workspace contains staged Git changes which will be "

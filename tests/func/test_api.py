@@ -20,7 +20,7 @@ def test_get_url_external(tmp_dir, erepo_dir, cloud):
         erepo_dir.dvc_gen("foo", "foo", commit="add foo")
 
     # Using file url to force clone to tmp repo
-    repo_url = f"file://{erepo_dir}"
+    repo_url = f"file://{erepo_dir.as_posix()}"
     expected_url = (cloud / "ac/bd18db4cc2f85cedef654fccc4a4d8").url
     assert api.get_url("foo", repo=repo_url) == expected_url
 
@@ -51,7 +51,7 @@ def test_open_external(tmp_dir, erepo_dir, cloud):
     remove(erepo_dir.dvc.odb.local.cache_dir)
 
     # Using file url to force clone to tmp repo
-    repo_url = f"file://{erepo_dir}"
+    repo_url = f"file://{erepo_dir.as_posix()}"
     with api.open("version", repo=repo_url) as fd:
         assert fd.read() == "master"
 
@@ -223,6 +223,8 @@ def test_open_from_remote(tmp_dir, erepo_dir, cloud, local_cloud):
     remove(erepo_dir.dvc.odb.local.cache_dir)
 
     with api.open(
-        os.path.join("dir", "foo"), repo=f"file://{erepo_dir}", remote="other"
+        os.path.join("dir", "foo"),
+        repo=f"file://{erepo_dir.as_posix()}",
+        remote="other",
     ) as fd:
         assert fd.read() == "foo content"

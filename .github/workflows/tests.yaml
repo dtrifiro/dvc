@@ -12,85 +12,84 @@ env:
   SHELL: /bin/bash
 
 jobs:
-  lint:
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
-    steps:
-    - name: Cancel Previous Runs
-      uses: styfle/cancel-workflow-action@0.9.1
-      with:
-        access_token: ${{ github.token }}
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v3
-      with:
-        python-version: 3.8
-    - name: Install requirements
-      run: |
-        pip install --upgrade pip setuptools wheel
-        pip install collective.checkdocs==0.2
-        pip install ".[dev]" pre-commit
-    - name: Check README
-      run: python setup.py checkdocs
-    - uses: pre-commit/action@v2.0.3
+  # lint:
+  #   timeout-minutes: 10
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Cancel Previous Runs
+  #       uses: styfle/cancel-workflow-action@0.9.1
+  #       with:
+  #         access_token: ${{ github.token }}
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Set up Python 3.8
+  #       uses: actions/setup-python@v3
+  #       with:
+  #         python-version: 3.8
+  #     - name: Install requirements
+  #       run: |
+  #         pip install --upgrade pip setuptools wheel
+  #         pip install collective.checkdocs==0.2
+  #         pip install ".[dev]" pre-commit
+  #     - name: Check README
+  #       run: python setup.py checkdocs
+  #     - uses: pre-commit/action@v2.0.3
   tests:
     timeout-minutes: 45
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, windows-latest, macos-latest]
-        pyv: ["3.7", "3.8", "3.9", "3.10"]
+        # os: [ubuntu-20.04, windows-latest, macos-latest]
+        os: [windows-latest]
+        pyv: ["3.8"]
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.pyv }}
-    - name: get pip cache dir
-      id: pip-cache-dir
-      run: |
-        echo "::set-output name=dir::$(pip cache dir)"
-    - name: set pip cache
-      id: pip-cache
-      uses: actions/cache@v3
-      with:
-        path: ${{ steps.pip-cache-dir.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('setup.cfg') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: install
-      if: steps.cache.pip-cache-dir.cache-hit != 'true'
-      run: |
-        pip install --upgrade pip setuptools wheel
-        pip install -e ".[dev]"
-    - name: run tests
-      timeout-minutes: 40
-      run: >-
-        python -m tests -n=auto
-        --cov-report=xml --cov-report=term
-        ${{ env.extra_test_args }}
-    - name: upload coverage report
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: false
-  notify:
-    if: github.ref == 'refs/heads/main' && failure()
-    needs:
-      - lint
-      - tests
-    runs-on: ubuntu-latest
-    steps:
-    - name: Slack Notification
-      uses: rtCamp/action-slack-notify@v2.2.0
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_COLOR: ${{ job.status }}
-        SLACK_MESSAGE: 'CI Failed on main :boom:'
-        SLACK_TITLE: CI Status
-        SLACK_USERNAME: DVC-CI
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.pyv }}
+      - name: get pip cache dir
+        id: pip-cache-dir
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+      - name: set pip cache
+        id: pip-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pip-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('setup.cfg') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: install
+        # if: steps.cache.pip-cache-dir.cache-hit != 'true'
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install -e ".[dev]"
+      - name: run tests
+        timeout-minutes: 40
+        run: >-
+          pytest -vv tests/func/test_api.py::test_get_url_external tests/func/test_api.py::test_open_external tests/func/test_api.py::test_open_from_remote
+      - name: upload coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+  # notify:
+  #   if: github.ref == 'refs/heads/main' && failure()
+  #   needs:
+  #     - lint
+  #     - tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Slack Notification
+  #       uses: rtCamp/action-slack-notify@v2.2.0
+  #       env:
+  #         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  #         SLACK_COLOR: ${{ job.status }}
+  #         SLACK_MESSAGE: "CI Failed on main :boom:"
+  #         SLACK_TITLE: CI Status
+  #         SLACK_USERNAME: DVC-CI

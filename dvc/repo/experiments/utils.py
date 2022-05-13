@@ -71,9 +71,9 @@ def iter_remote_refs(
     try:
         yield from scm.iter_remote_refs(url, base=base, **kwargs)
     except InvalidRemote as exc:
-        raise InvalidRemoteSCMRepo(str(exc))
+        raise InvalidRemoteSCMRepo(str(exc)) from exc
     except AuthError as exc:
-        raise GitAuthError(str(exc))
+        raise GitAuthError(str(exc)) from exc
 
 
 def push_refspec(

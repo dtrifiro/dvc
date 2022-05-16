@@ -19,11 +19,8 @@ def test_get_url_external(tmp_dir, erepo_dir, cloud):
     with erepo_dir.chdir():
         erepo_dir.dvc_gen("foo", "foo", commit="add foo")
 
-    if os.name == "nt":
-        repo_url = f"{erepo_dir.resolve()}"
-    else:
-        # Using file url to force clone to tmp repo
-        repo_url = f"file://{erepo_dir.resolve()}"
+    # Using file url to force clone to tmp repo
+    repo_url = f"file://{erepo_dir.resolve().as_posix()}"
     print("erepo_dir: ", erepo_dir)
     print("erepo_dir as string:", f"{erepo_dir}")
     print("resolved:", f"file://{erepo_dir.resolve()}")
@@ -57,11 +54,8 @@ def test_open_external(tmp_dir, erepo_dir, cloud):
     # Remove cache to force download
     remove(erepo_dir.dvc.odb.local.cache_dir)
 
-    if os.name == "nt":
-        repo_url = f"{erepo_dir.resolve()}"
-    else:
-        # Using file url to force clone to tmp repo
-        repo_url = f"file://{erepo_dir.resolve()}"
+    # Using file url to force clone to tmp repo
+    repo_url = f"file://{erepo_dir.as_posix()}"
     with api.open("version", repo=repo_url) as fd:
         assert fd.read() == "master"
 
@@ -232,15 +226,9 @@ def test_open_from_remote(tmp_dir, erepo_dir, cloud, local_cloud):
     erepo_dir.dvc.push(remote="other")
     remove(erepo_dir.dvc.odb.local.cache_dir)
 
-    if os.name == "nt":
-        repo_url = f"{erepo_dir.resolve()}"
-    else:
-        # Using file url to force clone to tmp repo
-        repo_url = f"file://{erepo_dir.resolve()}"
-
     with api.open(
         os.path.join("dir", "foo"),
-        repo=repo_url,
+        repo=f"file://{erepo_dir.as_posix()}",
         remote="other",
     ) as fd:
         assert fd.read() == "foo content"

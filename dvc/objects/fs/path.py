@@ -80,7 +80,18 @@ class Path:
         )
 
     def name(self, path):
-        return self.parts(path)[-1]
+        if not path:
+            return ""
+
+        parent, name = self.flavour.split(path)
+
+        if name:
+            return name
+
+        if parent == path:
+            return ""
+
+        return self.name(parent)
 
     def suffix(self, path):
         name = self.name(path)

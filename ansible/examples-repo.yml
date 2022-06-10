@@ -6,6 +6,6 @@
       git:
         repo: https://github.com/iterative/example-get-started
         dest: 'example-get-started'
-        version: master
+        version: main
 
 

@@ -128,7 +128,16 @@ def _fetch_partial_imports(repo, targets, **kwargs):
     failed = 0
     for stage in repo.partial_imports(targets, **kwargs):
         try:
-            stage.run()
+            dep = stage.deps[0]
+            old_hash_info = dep.hash_info
+            obj = dep.transfer(
+                dep.def_path, jobs=kwargs.get("jobs"), odb=repo.odb.local
+            )
+            stage.outs[0].hash_info = obj.hash_info
+            stage.outs[0].meta = dep.meta  # not really required
+            stage.save_deps()
+            if old_hash_info != dep.hash_info:
+                raise DataSourceChanged(f"{stage} ({dep})")
         except DataSourceChanged as exc:
             logger.warning(f"{exc}")
             failed += 1

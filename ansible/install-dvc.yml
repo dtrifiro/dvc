@@ -2,17 +2,17 @@
 - hosts: all
 
   tasks:
-    - name: install dvc-2.15 .deb source
+    - name: install dvc-2.36 .deb source
       apt:
-        deb: https://dvc.org/download/linux-deb/dvc-2.15.0
+        deb: https://dvc.org/download/linux-deb/dvc-2.36.0
         state: present
       become: true
       register: apt_output
       when: ansible_os_family == 'Debian'
 
-    - name: install dvc-2.15.0 .rpm source
+    - name: install dvc-2.36.0 .rpm source
       yum:
-        name: https://dvc.org/download/linux-rpm/dvc-2.15.0
+        name: https://dvc.org/download/linux-rpm/dvc-2.36.0
         state: present
       become: true
       when: ansible_os_family == 'RedHat'

@@ -48,17 +48,13 @@ Vagrant.configure("2") do |config|
   # argument is a set of non-required options.
   # config.vm.synced_folder "../data", "/vagrant_data"
 
-  # Provider-specific configuration so you can fine-tune various
-  # backing providers for Vagrant. These expose provider-specific options.
-  # Example for VirtualBox:
-  #
-  # config.vm.provider "virtualbox" do |vb|
-  #   # Display the VirtualBox GUI when booting the machine
-  #   vb.gui = true
-  #
-  #   # Customize the amount of memory on the VM:
-  #   vb.memory = "1024"
-  # end
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.cpus = 4
+    libvirt.cpuset = '1-4,^3,6'
+    libvirt.cputopology :sockets => '2', :cores => '2', :threads => '1'
+    libvirt.memory = "4096"
+  end
+
   #
   # View the documentation for the provider you are using for more
   # information on available options.

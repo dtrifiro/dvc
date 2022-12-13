@@ -2,13 +2,38 @@ import logging
 import os
 from typing import TYPE_CHECKING, List, Optional
 
-from funcy import first
+from .exceptions import UnchangedExperimentError
+from .executor.base import BaseExecutor
+from .refs import ExpRefInfo
 
 if TYPE_CHECKING:
     from dvc.repo import Repo
 
 
 logger = logging.getLogger(__name__)
+
+
+def _save_experiment(
+    repo: "Repo",
+    baseline_rev: str,
+    force: bool,
+    name: Optional[str],
+    include_untracked: Optional[List[str]],
+) -> str:
+    stages = repo.commit([], force=force)
+    exp_hash = BaseExecutor.hash_exp(stages)
+
+    name = name or f"exp-{exp_hash[:5]}"
+    repo.scm.add([], update=True)
+    if include_untracked:
+        repo.scm.add(include_untracked)
+
+    ref_info = ExpRefInfo(baseline_rev, name)
+    repo.scm.commit(f"dvc: commit experiment {exp_hash}", no_verify=True)
+    exp_rev = repo.scm.get_rev()
+    repo.scm.set_ref(str(ref_info), exp_rev, old_ref=None)
+
+    return exp_rev
 
 
 def save(
@@ -21,24 +46,41 @@ def save(
 
     Returns the saved experiment's SHAs.
     """
-    queue = repo.experiments.workspace_queue
     logger.debug("Saving workspace in %s", os.getcwd())
 
-    staged, _, _ = repo.scm.status(untracked_files="no")
-    if staged:
+    _, _, untracked = repo.scm.status()
+    if untracked:
         logger.warning(
-            "Your workspace contains staged Git changes which will be "
-            "unstaged before saving this experiment."
+            "The following untracked files were present in "
+            "the workspace before saving but "
+            "will not be included in the experiment commit:\n"
+            "\t%s",
+            ", ".join(
+                untracked
+                if not include_untracked
+                else [
+                    file for file in untracked if file not in include_untracked
+                ]
+            ),
         )
-        repo.scm.reset()
 
-    entry = repo.experiments.new(queue=queue, name=name, force=force)
-    executor = queue.init_executor(repo.experiments, entry)
+    with repo.scm.detach_head(client="dvc") as orig_head:
+        stash_head = orig_head
+        rev = repo.scm.get_rev()
+        assert stash_head == rev
 
-    save_result = executor.save(
-        executor.info, force=force, include_untracked=include_untracked
-    )
-    result = queue.collect_executor(repo.experiments, executor, save_result)
+        with repo.scm.stash_workspace() as workspace:
+            try:
+                if workspace is None:
+                    if not include_untracked:
+                        raise UnchangedExperimentError(orig_head)
+                else:
+                    repo.scm.stash.apply(workspace)
 
-    exp_rev = first(result)
+                exp_rev = _save_experiment(
+                    repo, orig_head, force, name, include_untracked
+                )
+            finally:
+                repo.scm.reset(hard=True)
+
     return exp_rev

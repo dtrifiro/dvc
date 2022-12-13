@@ -2,9 +2,10 @@ import logging
 import os
 from typing import TYPE_CHECKING, List, Optional
 
-from .exceptions import UnchangedExperimentError
+from .exceptions import ExperimentExistsError, UnchangedExperimentError
 from .executor.base import BaseExecutor
 from .refs import ExpRefInfo
+from .utils import check_ref_format
 
 if TYPE_CHECKING:
     from dvc.repo import Repo
@@ -29,9 +30,14 @@ def _save_experiment(
         repo.scm.add(include_untracked)
 
     ref_info = ExpRefInfo(baseline_rev, name)
+    ref = str(ref_info)
+    check_ref_format(repo.scm, ref_info)
+    if repo.scm.get_ref(ref) and not force:
+        raise ExperimentExistsError(ref_info.name, command="save")
+
     repo.scm.commit(f"dvc: commit experiment {exp_hash}", no_verify=True)
     exp_rev = repo.scm.get_rev()
-    repo.scm.set_ref(str(ref_info), exp_rev, old_ref=None)
+    repo.scm.set_ref(ref, exp_rev, old_ref=None)
 
     return exp_rev
 
@@ -72,7 +78,7 @@ def save(
         with repo.scm.stash_workspace() as workspace:
             try:
                 if workspace is None:
-                    if not include_untracked:
+                    if not (include_untracked or force):
                         raise UnchangedExperimentError(orig_head)
                 else:
                     repo.scm.stash.apply(workspace)

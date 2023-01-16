@@ -64,6 +64,7 @@ class CmdAdd(CmdBase):
                 meta=self.args.meta,
                 remote=self.args.remote,
                 to_remote=self.args.to_remote,
+                worktree=self.args.worktree,
                 jobs=self.args.jobs,
             )
 
@@ -130,6 +131,12 @@ def add_parser(subparsers, parent_parser):
         "--remote",
         help="Remote storage to download to",
         metavar="<name>",
+    )
+    parser.add_argument(
+        "--worktree",
+        action="store_true",
+        default=False,
+        help="Track data on remote location.",
     )
     parser.add_argument(
         "-j",

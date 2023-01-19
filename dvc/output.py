@@ -123,7 +123,7 @@ def loads_from(
     checkpoint=False,
     remote=None,
     push=True,
-    worktree=False,
+    worktree: bool = False,
 ):
     return [
         _get(
@@ -366,6 +366,7 @@ class Output:
                 self.def_path, self.meta.version_id
             )
             self.meta.version_id = version_id
+        self.worktree = worktree
 
         if self.is_in_repo:
             self.hash_name = "md5"
@@ -455,6 +456,9 @@ class Output:
 
     @property
     def odb(self):
+        if self.worktree:
+            return self.repo.odb.local
+
         odb_name = "repo" if self.is_in_repo else self.protocol
         odb = getattr(self.repo.odb, odb_name)
         if self.use_cache and odb is None:
@@ -646,7 +650,7 @@ class Output:
         if self.metric:
             self.verify_metric()
 
-        if self.use_cache:
+        if self.use_cache or self.worktree:
             _, self.meta, self.obj = build(
                 self.odb,
                 self.fs_path,

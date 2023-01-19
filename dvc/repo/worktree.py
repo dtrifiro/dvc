@@ -65,6 +65,38 @@ def worktree_view(
     )
 
 
+def add_worktree_stage(
+    repo: "Repo",
+    stages: Iterable["Stage"],
+    remote: "Remote",
+):
+    from dvc_data.index import build
+
+    logger.debug("indexing latest worktree for '%s'", remote.path)
+    remote_index = build(remote.path, remote.fs)
+    for stage in stages:
+        for out in stage.outs:
+            _workspace, key = out.index_key
+            if key not in remote_index:
+                raise FileNotFoundError(
+                    "Could not add '%s', does not exist in the remote", key
+                )
+
+            _fetch_outs(out, remote_index, remote, fs=repo.fs)
+        stage.save()
+
+        # updating meta shouldn't be needed: it should be enough to just build
+        # the new tree ## although it might be possible for out to be missing
+        # hash_info/meta. Check if this is the case: it should be enough to
+        # check where _update_out_meta is called when calling
+        # update_worktree_stages
+
+        # for out in stage.outs:
+        #     _update_out_meta(out, remote_index)
+
+        stage.dump(with_files=True, update_pipeline=False)
+
+
 def fetch_worktree(
     repo: "Repo",
     remote: "Remote",
@@ -259,6 +291,36 @@ def _fetch_out_changes(
             out.repo.root_dir,
             out.fs,
             old=old,
+            delete=True,
+            update_meta=False,
+            meta_only=True,
+            meta_cmp_key=partial(_meta_checksum, remote.fs),
+            callback=cb,
+        )
+
+
+def _fetch_outs(
+    out: "Output",
+    remote_index: Union["DataIndex", "DataIndexView"],
+    remote: "Remote",
+    fs: "FileSystem",
+):
+    from dvc_data.index import DataIndex, checkout
+
+    _, key = out.index_key
+    data_index = DataIndex()
+    for _, entry in remote_index.iteritems(key):
+        data_index.add(entry)
+    total = len(data_index)
+    with Callback.as_tqdm_callback(
+        unit="file", desc=f"Fetching '{out}'", disable=total == 0
+    ) as cb:
+        cb.set_size(total)
+        checkout(
+            remote_index,
+            out.repo.root_dir,
+            # out.fs, # FIXME: when using out.fs, we try to checkout on the remote fs, which is not what we want to do
+            fs,
             delete=True,
             update_meta=False,
             meta_only=True,

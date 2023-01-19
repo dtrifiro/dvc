@@ -26,6 +26,7 @@ from dvc.utils.collections import ensure_list, validate
 from . import locked
 
 if TYPE_CHECKING:
+    from dvc.data_cloud import Remote
     from dvc.repo import Repo
     from dvc.stage import Stage
     from dvc.types import TargetType
@@ -162,6 +163,7 @@ def add(  # noqa: C901
     no_commit: bool = False,
     fname: Optional[str] = None,
     to_remote: bool = False,
+    worktree: bool = False,
     **kwargs: Any,
 ):
     to_cache = bool(kwargs.get("out")) and not to_remote
@@ -174,7 +176,9 @@ def add(  # noqa: C901
 
     # collect targets and build stages as we go
     desc = "Collecting targets"
-    stages_it = create_stages(repo, add_targets, fname, transfer, **kwargs)
+    stages_it = create_stages(
+        repo, add_targets, fname, transfer, worktree=worktree, **kwargs
+    )
     stages = list(ui.progress(stages_it, desc=desc, unit="file"))
     msg = "Collecting stages from the workspace"
     with translate_graph_error(stages), ui.status(msg) as status:
@@ -187,6 +191,19 @@ def add(  # noqa: C901
     odb = None
     if to_remote:
         odb = repo.cloud.get_remote_odb(kwargs.get("remote"), "add")
+
+    if worktree:
+        from dvc.repo.worktree import add_worktree_stage
+
+        # FIXME: this needs to be added beforehand?
+        worktree_remote: Optional["Remote"] = None
+        _remote = repo.cloud.get_remote(name=kwargs.get("remote"))
+        if _remote.worktree or _remote.fs.version_aware:
+            worktree_remote = _remote
+
+        assert worktree_remote is not None
+        add_worktree_stage(repo, stages, worktree_remote)
+        return stages
 
     with warn_link_failures() as link_failures:
         for stage, source in zip(progress_iter(stages), sources):
@@ -254,6 +271,7 @@ def create_stages(
     fname: Optional[str] = None,
     transfer: bool = False,
     external: bool = False,
+    worktree: bool = False,
     **kwargs: Any,
 ) -> Iterator["Stage"]:
     for target in targets:
@@ -270,6 +288,7 @@ def create_stages(
             wdir=wdir,
             outs=[out],
             external=external,
+            worktree=worktree,
         )
 
         out_obj = stage.outs[0]

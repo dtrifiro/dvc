@@ -94,7 +94,14 @@ class RawData:
     generated_from: Optional[str] = None
 
 
-def create_stage(cls: Type[_T], repo, path, external=False, **kwargs) -> _T:
+def create_stage(
+    cls: Type[_T],
+    repo: "Repo",
+    path: str,
+    external: bool = False,
+    worktree: bool = False,
+    **kwargs,
+) -> _T:
     from dvc.dvcfile import check_dvcfile_path
 
     wdir = os.path.abspath(kwargs.get("wdir", None) or os.curdir)
@@ -105,8 +112,8 @@ def create_stage(cls: Type[_T], repo, path, external=False, **kwargs) -> _T:
     check_stage_path(repo, os.path.dirname(path))
 
     stage = loads_from(cls, repo, path, wdir, kwargs)
-    fill_stage_outputs(stage, **kwargs)
-    if not external:
+    fill_stage_outputs(stage, worktree=worktree, **kwargs)
+    if not (external or worktree):
         check_no_externals(stage)
     fill_stage_dependencies(
         stage, **project(kwargs, ["deps", "erepo", "params", "fs_config"])

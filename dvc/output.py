@@ -92,6 +92,7 @@ def loadd_from(stage, d_list):
         annot = {field: d.pop(field, None) for field in ANNOTATION_FIELDS}
         files = d.pop(Output.PARAM_FILES, None)
         push = d.pop(Output.PARAM_PUSH, True)
+        worktree = d.pop(Output.PARAM_WORKTREE, True)
         ret.append(
             _get(
                 stage,
@@ -106,6 +107,7 @@ def loadd_from(stage, d_list):
                 **annot,
                 files=files,
                 push=push,
+                worktree=worktree,
             )
         )
     return ret
@@ -121,6 +123,7 @@ def loads_from(
     checkpoint=False,
     remote=None,
     push=True,
+    worktree=False,
 ):
     return [
         _get(
@@ -134,6 +137,7 @@ def loads_from(
             checkpoint=checkpoint,
             remote=remote,
             push=push,
+            worktree=worktree,
         )
         for s in s_list
     ]
@@ -190,6 +194,7 @@ def load_from_pipeline(stage, data, typ="outs"):
                 Output.PARAM_CHECKPOINT,
                 Output.PARAM_REMOTE,
                 Output.PARAM_PUSH,
+                Output.PARAM_WORKTREE,
                 *ANNOTATION_FIELDS,
             ],
         )
@@ -258,6 +263,7 @@ class Output:
     PARAM_PERSIST = "persist"
     PARAM_REMOTE = "remote"
     PARAM_PUSH = "push"
+    PARAM_WORKTREE = "worktree"
 
     METRIC_SCHEMA = Any(
         None,
@@ -292,6 +298,7 @@ class Output:
         fs_config=None,
         files: Optional[List[Dict[str, Any]]] = None,
         push: bool = True,
+        worktree: bool = False,
     ):
         self.annot = Annotation(
             desc=desc, type=type, labels=labels or [], meta=meta or {}
@@ -347,6 +354,7 @@ class Output:
         self.persist = persist
         self.checkpoint = checkpoint
         self.can_push = push
+        self.worktree = worktree
 
         self.fs_path = self._parse_path(self.fs, fs_path)
         self.obj: Optional["HashFile"] = None
@@ -788,6 +796,9 @@ class Output:
             if not self.can_push:
                 ret[self.PARAM_PUSH] = self.can_push
 
+            if self.worktree:
+                ret[self.PARAM_WORKTREE] = self.worktree
+
         if (
             (not self.IS_DEPENDENCY or self.stage.is_import)
             and self.hash_info.isdir
@@ -1209,6 +1220,7 @@ class Output:
         self.annot = other.annot
         self.remote = other.remote
         self.can_push = other.can_push
+        self.worktree = other.worktree
 
     def merge_version_meta(self, other: "Output"):
         """Merge version meta for files which are unchanged from other."""
@@ -1262,5 +1274,6 @@ SCHEMA = {
     Output.PARAM_METRIC: Output.METRIC_SCHEMA,
     Output.PARAM_REMOTE: str,
     Output.PARAM_PUSH: bool,
+    Output.PARAM_WORKTREE: bool,
     Output.PARAM_FILES: [DIR_FILES_SCHEMA],
 }

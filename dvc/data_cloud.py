@@ -12,14 +12,18 @@ if TYPE_CHECKING:
     from dvc_data.hashfile.hash_info import HashInfo
     from dvc_data.hashfile.status import CompareStatusResult
     from dvc_data.hashfile.transfer import TransferResult
+    from dvc_objects.fs import FileSystem
 
 logger = logging.getLogger(__name__)
 
 
 class Remote:
-    def __init__(self, path, fs, **config):
+    def __init__(
+        self, path: str, fs: "FileSystem", name: Optional[str] = None, **config
+    ):
         self.path = path
         self.fs = fs
+        self.name = name
 
         self.worktree = config.pop("worktree", False)
         self.config = config
@@ -71,7 +75,7 @@ class DataCloud:
             cls, config, fs_path = get_cloud_fs(self.repo, name=name)
             fs = cls(**config)
             config["tmp_dir"] = self.repo.index_db_dir
-            return Remote(fs_path, fs, **config)
+            return Remote(fs_path, fs, name=name, **config)
 
         if bool(self.repo.config["remote"]):
             error_msg = (

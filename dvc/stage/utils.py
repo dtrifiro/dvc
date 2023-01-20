@@ -76,7 +76,7 @@ def fill_stage_outputs(stage, **kwargs):
             metric="metrics" in key,
             plot="plots" in key,
             checkpoint="checkpoints" in key,
-            worktree=kwargs.get("worktree", False),
+            worktree_remote=kwargs.get("worktree_remote"),
         )
 
 

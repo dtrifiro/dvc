@@ -50,6 +50,7 @@ from .utils import (
 if TYPE_CHECKING:
     from dvc.dvcfile import ProjectFile, SingleStageFile
     from dvc.output import Output
+    from dvc.remote import Remote
     from dvc.repo import Repo
     from dvc.types import StrPath
     from dvc_data.hashfile.hash_info import HashInfo
@@ -99,7 +100,7 @@ def create_stage(
     repo: "Repo",
     path: str,
     external: bool = False,
-    worktree: bool = False,
+    worktree_remote: Optional["Remote"] = None,
     **kwargs,
 ) -> _T:
     from dvc.dvcfile import check_dvcfile_path
@@ -112,8 +113,8 @@ def create_stage(
     check_stage_path(repo, os.path.dirname(path))
 
     stage = loads_from(cls, repo, path, wdir, kwargs)
-    fill_stage_outputs(stage, worktree=worktree, **kwargs)
-    if not (external or worktree):
+    fill_stage_outputs(stage, worktree_remote=worktree_remote, **kwargs)
+    if not external:
         check_no_externals(stage)
     fill_stage_dependencies(
         stage, **project(kwargs, ["deps", "erepo", "params", "fs_config"])

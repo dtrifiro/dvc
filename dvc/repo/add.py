@@ -176,8 +176,21 @@ def add(  # noqa: C901
 
     # collect targets and build stages as we go
     desc = "Collecting targets"
+
+    worktree_remote: Optional["Remote"] = None
+    if worktree:
+        # FIXME: this needs to be added instead of retrieved if it does not exist
+        _remote = repo.cloud.get_remote(name=kwargs.get("remote"))
+        if _remote.worktree or _remote.fs.version_aware:
+            worktree_remote = _remote
+
     stages_it = create_stages(
-        repo, add_targets, fname, transfer, worktree=worktree, **kwargs
+        repo,
+        add_targets,
+        fname,
+        transfer,
+        worktree_remote=worktree_remote,
+        **kwargs,
     )
     stages = list(ui.progress(stages_it, desc=desc, unit="file"))
     msg = "Collecting stages from the workspace"
@@ -192,17 +205,10 @@ def add(  # noqa: C901
     if to_remote:
         odb = repo.cloud.get_remote_odb(kwargs.get("remote"), "add")
 
-    if worktree:
+    if worktree_remote is not None:
         from dvc.repo.worktree import add_worktree_stage
 
-        # FIXME: this needs to be added beforehand?
-        worktree_remote: Optional["Remote"] = None
-        _remote = repo.cloud.get_remote(name=kwargs.get("remote"))
-        if _remote.worktree or _remote.fs.version_aware:
-            worktree_remote = _remote
-
-        assert worktree_remote is not None
-        add_worktree_stage(repo, stages, worktree_remote)
+        add_worktree_stage(stages, worktree_remote)
         return stages
 
     with warn_link_failures() as link_failures:
@@ -271,7 +277,7 @@ def create_stages(
     fname: Optional[str] = None,
     transfer: bool = False,
     external: bool = False,
-    worktree: bool = False,
+    worktree_remote: Optional["Remote"] = None,
     **kwargs: Any,
 ) -> Iterator["Stage"]:
     for target in targets:
@@ -288,7 +294,7 @@ def create_stages(
             wdir=wdir,
             outs=[out],
             external=external,
-            worktree=worktree,
+            worktree_remote=worktree_remote,
         )
 
         out_obj = stage.outs[0]

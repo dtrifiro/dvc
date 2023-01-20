@@ -37,6 +37,7 @@ from .utils import relpath
 from .utils.fs import path_isin
 
 if TYPE_CHECKING:
+    from dvc.data_cloud import Remote
     from dvc_data.hashfile.obj import HashFile
     from dvc_data.index import DataIndexKey
     from dvc_objects.db import ObjectDB
@@ -92,7 +93,10 @@ def loadd_from(stage, d_list):
         annot = {field: d.pop(field, None) for field in ANNOTATION_FIELDS}
         files = d.pop(Output.PARAM_FILES, None)
         push = d.pop(Output.PARAM_PUSH, True)
-        worktree = d.pop(Output.PARAM_WORKTREE, True)
+        worktree_remote = d.pop(Output.PARAM_WORKTREE_REMOTE, None)
+        if worktree_remote:
+            worktree_remote = stage.repo.cloud.get_remote(worktree_remote)
+
         ret.append(
             _get(
                 stage,
@@ -107,7 +111,7 @@ def loadd_from(stage, d_list):
                 **annot,
                 files=files,
                 push=push,
-                worktree=worktree,
+                worktree_remote=worktree_remote,
             )
         )
     return ret
@@ -123,7 +127,7 @@ def loads_from(
     checkpoint=False,
     remote=None,
     push=True,
-    worktree: bool = False,
+    worktree_remote: Optional["Remote"] = None,
 ):
     return [
         _get(
@@ -137,7 +141,7 @@ def loads_from(
             checkpoint=checkpoint,
             remote=remote,
             push=push,
-            worktree=worktree,
+            worktree_remote=worktree_remote,
         )
         for s in s_list
     ]
@@ -194,7 +198,7 @@ def load_from_pipeline(stage, data, typ="outs"):
                 Output.PARAM_CHECKPOINT,
                 Output.PARAM_REMOTE,
                 Output.PARAM_PUSH,
-                Output.PARAM_WORKTREE,
+                Output.PARAM_WORKTREE_REMOTE,
                 *ANNOTATION_FIELDS,
             ],
         )
@@ -263,7 +267,7 @@ class Output:
     PARAM_PERSIST = "persist"
     PARAM_REMOTE = "remote"
     PARAM_PUSH = "push"
-    PARAM_WORKTREE = "worktree"
+    PARAM_WORKTREE_REMOTE = "worktree_remote"
 
     METRIC_SCHEMA = Any(
         None,
@@ -298,13 +302,24 @@ class Output:
         fs_config=None,
         files: Optional[List[Dict[str, Any]]] = None,
         push: bool = True,
-        worktree: bool = False,
+        worktree_remote: Optional["Remote"] = None,
     ):
         self.annot = Annotation(
             desc=desc, type=type, labels=labels or [], meta=meta or {}
         )
         self.repo = stage.repo if not repo and stage else repo
         meta = Meta.from_dict(info or {})
+
+        if worktree_remote:
+            assert worktree_remote.worktree  # type: ignore[has-type]
+
+            self.worktree_remote = worktree_remote
+            self.worktree_path = path
+            worktree_fs_path = worktree_remote.fs._strip_protocol(path)
+            path = worktree_remote.fs.path.relpath(
+                worktree_fs_path, worktree_remote.path
+            )
+
         # NOTE: when version_aware is not passed into get_cloud_fs, it will be
         # set based on whether or not path is versioned
         fs_kwargs = {"version_aware": True} if meta.version_id else {}
@@ -354,7 +369,6 @@ class Output:
         self.persist = persist
         self.checkpoint = checkpoint
         self.can_push = push
-        self.worktree = worktree
 
         self.fs_path = self._parse_path(self.fs, fs_path)
         self.obj: Optional["HashFile"] = None
@@ -366,7 +380,6 @@ class Output:
                 self.def_path, self.meta.version_id
             )
             self.meta.version_id = version_id
-        self.worktree = worktree
 
         if self.is_in_repo:
             self.hash_name = "md5"
@@ -456,9 +469,6 @@ class Output:
 
     @property
     def odb(self):
-        if self.worktree:
-            return self.repo.odb.local
-
         odb_name = "repo" if self.is_in_repo else self.protocol
         odb = getattr(self.repo.odb, odb_name)
         if self.use_cache and odb is None:
@@ -650,7 +660,7 @@ class Output:
         if self.metric:
             self.verify_metric()
 
-        if self.use_cache or self.worktree:
+        if self.use_cache:
             _, self.meta, self.obj = build(
                 self.odb,
                 self.fs_path,
@@ -800,8 +810,10 @@ class Output:
             if not self.can_push:
                 ret[self.PARAM_PUSH] = self.can_push
 
-            if self.worktree:
-                ret[self.PARAM_WORKTREE] = self.worktree
+            if self.worktree_remote:
+                assert self.worktree_remote.name
+
+                ret[self.PARAM_WORKTREE_REMOTE] = self.worktree_remote.name
 
         if (
             (not self.IS_DEPENDENCY or self.stage.is_import)
@@ -1224,7 +1236,7 @@ class Output:
         self.annot = other.annot
         self.remote = other.remote
         self.can_push = other.can_push
-        self.worktree = other.worktree
+        self.worktree_remote = other.worktree_remote
 
     def merge_version_meta(self, other: "Output"):
         """Merge version meta for files which are unchanged from other."""
@@ -1278,6 +1290,6 @@ SCHEMA = {
     Output.PARAM_METRIC: Output.METRIC_SCHEMA,
     Output.PARAM_REMOTE: str,
     Output.PARAM_PUSH: bool,
-    Output.PARAM_WORKTREE: bool,
+    Output.PARAM_WORKTREE_REMOTE: str,
     Output.PARAM_FILES: [DIR_FILES_SCHEMA],
 }

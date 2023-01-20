@@ -66,7 +66,6 @@ def worktree_view(
 
 
 def add_worktree_stage(
-    repo: "Repo",
     stages: Iterable["Stage"],
     remote: "Remote",
 ):
@@ -82,8 +81,10 @@ def add_worktree_stage(
                     "Could not add '%s', does not exist in the remote", key
                 )
 
-            _fetch_outs(out, remote_index, remote, fs=repo.fs)
+            _fetch_outs(out, remote_index, remote)
         stage.save()
+        for out in stage.outs:
+            _update_out_meta(out, remote_index)
 
         # updating meta shouldn't be needed: it should be enough to just build
         # the new tree ## although it might be possible for out to be missing
@@ -303,7 +304,6 @@ def _fetch_outs(
     out: "Output",
     remote_index: Union["DataIndex", "DataIndexView"],
     remote: "Remote",
-    fs: "FileSystem",
 ):
     from dvc_data.index import DataIndex, checkout
 
@@ -319,8 +319,7 @@ def _fetch_outs(
         checkout(
             remote_index,
             out.repo.root_dir,
-            # out.fs, # FIXME: when using out.fs, we try to checkout on the remote fs, which is not what we want to do
-            fs,
+            out.fs,
             delete=True,
             update_meta=False,
             meta_only=True,

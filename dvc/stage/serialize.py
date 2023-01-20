@@ -37,7 +37,7 @@ PARAM_CHECKPOINT = Output.PARAM_CHECKPOINT
 PARAM_DESC = Annotation.PARAM_DESC
 PARAM_REMOTE = Output.PARAM_REMOTE
 PARAM_PUSH = Output.PARAM_PUSH
-PARAM_WORKTREE = Output.PARAM_WORKTREE
+PARAM_WORKTREE_REMOTE = Output.PARAM_WORKTREE_REMOTE
 
 DEFAULT_PARAMS_FILE = ParamsDependency.DEFAULT_PARAMS_FILE
 
@@ -62,8 +62,8 @@ def _get_flags(out):
         yield PARAM_REMOTE, out.remote
     if not out.can_push:
         yield PARAM_PUSH, False
-    if out.worktree:
-        yield PARAM_WORKTREE, True
+    if out.worktree_remote:
+        yield PARAM_WORKTREE_REMOTE, True
 
 
 def _serialize_out(out):

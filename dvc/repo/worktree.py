@@ -65,37 +65,22 @@ def worktree_view(
     )
 
 
-def add_worktree_stage(
-    stages: Iterable["Stage"],
-    remote: "Remote",
-):
+def add_worktree_stage(stage: "Stage", remote: "Remote"):
     from dvc_data.index import build
 
     logger.debug("indexing latest worktree for '%s'", remote.path)
     remote_index = build(remote.path, remote.fs)
-    for stage in stages:
-        for out in stage.outs:
-            _workspace, key = out.index_key
-            if key not in remote_index:
-                raise FileNotFoundError(
-                    "Could not add '%s', does not exist in the remote", key
-                )
+    for out in stage.outs:
+        _workspace, key = out.index_key
+        if key not in remote_index:
+            raise FileNotFoundError(
+                "Could not add '%s', does not exist in the remote", key
+            )
 
-            _fetch_outs(out, remote_index, remote)
-        stage.save()
-        for out in stage.outs:
-            _update_out_meta(out, remote_index)
-
-        # updating meta shouldn't be needed: it should be enough to just build
-        # the new tree ## although it might be possible for out to be missing
-        # hash_info/meta. Check if this is the case: it should be enough to
-        # check where _update_out_meta is called when calling
-        # update_worktree_stages
-
-        # for out in stage.outs:
-        #     _update_out_meta(out, remote_index)
-
-        stage.dump(with_files=True, update_pipeline=False)
+        _fetch_outs(out, remote_index, remote)
+    stage.save()
+    for out in stage.outs:
+        _update_out_meta(out, remote_index)
 
 
 def fetch_worktree(

@@ -2,7 +2,7 @@ import logging
 import os
 from contextlib import contextmanager
 from itertools import tee
-from typing import TYPE_CHECKING, Any, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
 
 import colorama
 
@@ -14,6 +14,7 @@ from dvc.exceptions import (
     RecursiveAddingWhileUsingFilename,
 )
 from dvc.repo.scm_context import scm_context
+from dvc.repo.worktree import add_worktree_stage
 from dvc.ui import ui
 from dvc.utils import (
     LARGE_DIR_SIZE,
@@ -205,24 +206,25 @@ def add(  # noqa: C901
     if to_remote:
         odb = repo.cloud.get_remote_odb(kwargs.get("remote"), "add")
 
-    if worktree_remote is not None:
-        from dvc.repo.worktree import add_worktree_stage
-
-        add_worktree_stage(stages, worktree_remote)
-        return stages
-
     with warn_link_failures() as link_failures:
         for stage, source in zip(progress_iter(stages), sources):
             if to_remote or to_cache:
                 stage.transfer(source, to_remote=to_remote, odb=odb, **kwargs)
             else:
+                dump_kwargs: Dict[str, Any] = {}
                 try:
-                    stage.save(merge_versioned=True)
+                    if worktree_remote is not None:
+                        add_worktree_stage(stage, worktree_remote)
+                        dump_kwargs.update(
+                            with_files=True, update_pipeline=False
+                        )
+                    else:
+                        stage.save()
                     if not no_commit:
                         stage.commit()
                 except CacheLinkError:
                     link_failures.append(str(stage.relpath))
-            stage.dump()
+            stage.dump(**dump_kwargs)
     return stages
 
 

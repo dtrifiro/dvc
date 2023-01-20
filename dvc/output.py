@@ -315,10 +315,11 @@ class Output:
 
             self.worktree_remote = worktree_remote
             self.worktree_path = path
-            worktree_fs_path = worktree_remote.fs._strip_protocol(path)
-            path = worktree_remote.fs.path.relpath(
-                worktree_fs_path, worktree_remote.path
-            )
+            if path.startswith(worktree_remote.fs.protocol):
+                worktree_fs_path = worktree_remote.fs._strip_protocol(path)
+                path = worktree_remote.fs.path.relpath(
+                    worktree_fs_path, worktree_remote.path
+                )
 
         # NOTE: when version_aware is not passed into get_cloud_fs, it will be
         # set based on whether or not path is versioned
